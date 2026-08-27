@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Basket Check</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <p class="eyebrow">Aotearoa grocery intelligence</p>
+      <h1>Basket Check</h1>
+      <p class="lede">Build a shopping list, then check the same basket across NZ stores.</p>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}<p class="notice {{ category }}">{{ message }}</p>{% endfor %}
+    {% endwith %}
+    <section class="create-panel">
+      <div><h2>Start a list</h2><p>Name a weekly shop, dinner plan, or pantry restock.</p></div>
+      <form method="post" action="{{ url_for('create_list') }}" class="inline-form">
+        <input name="name" placeholder="e.g. Sunday shop" required>
+        <button type="submit">Create list</button>
+      </form>
+    </section>
+    <section class="list-section">
+      <div class="section-heading"><h2>Your lists</h2><span>{{ lists|length }} total</span></div>
+      {% if lists %}
+      <div class="list-grid">
+        {% for shopping_list in lists %}
+        <a class="list-card" href="{{ url_for('list_detail', list_id=shopping_list.id) }}">
+          <span class="list-number">{{ "%02d"|format(loop.index) }}</span>
+          <strong>{{ shopping_list.name }}</strong>
+          <span>{{ shopping_list.product_count }} product{{ '' if shopping_list.product_count == 1 else 's' }} <b>→</b></span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}<div class="empty"><p>No lists yet. Make your first comparison above.</p></div>{% endif %}
+    </section>
+  </main>
+</body>
+</html>

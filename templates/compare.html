@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Comparison | Basket Check</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body>
+  <main class="shell">
+    <nav><a href="{{ url_for('index') }}">← All lists</a></nav>
+    <header class="page-head"><p class="eyebrow">Comparison complete</p><h1>Your basket, store by store</h1><p class="lede">Checked {{ checked_at }}. Prices are indicative until the retailer adapter is tuned and verified.</p></header>
+    <div class="comparison-table">
+      <div class="table-head"><span>Product</span>{% for key, name, kind in retailers %}<span>{{ name }}{% if kind == 'manual' %}<small>manual</small>{% endif %}</span>{% endfor %}</div>
+      {% for row in results %}<div class="table-row"><strong>{{ row.product.name }}</strong>{% for key, name, kind in retailers %}{% set result = row.prices[key] %}<div class="price-cell {% if result.status == 'found' %}found{% endif %}">{% if key == 'vegiking' and row.product.manual_price is not none %}<b>${{ '%.2f'|format(row.product.manual_price) }}</b><small>manual entry</small>{% elif result.price is not none %}<b>${{ '%.2f'|format(result.price) }}</b>{% else %}<b>--</b><small>{{ result.status }}</small>{% endif %}</div>{% endfor %}</div>{% endfor %}
+    </div>
+    <p class="fine-print">Retailer pages can change and may block automated requests. Respect each retailer’s terms, robots.txt, rate limits, and any available official access method.</p>
+  </main>
+</body>
+</html>
