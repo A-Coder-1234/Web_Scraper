@@ -9,9 +9,9 @@ from difflib import SequenceMatcher
 import sys
 
 # Defines keywords, later defined by user
-#search = sys.argv[1]
-#keywords = search.lower().split()
-keywords = [ "corn", "chips"]
+search = sys.argv[1]
+keywords = search.lower().split()
+error_log = []
 
 # Sets the headers to imitate a web browser
 headers = {
@@ -52,10 +52,14 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
             try:
                 with urllib.request.urlopen(target, timeout=30) as response:
                     product_list = response.read().decode('utf-8')
+                    soup = BeautifulSoup(product_list, 'xml')
+                    for product_tag in soup.find_all('loc'):
+                        product_url = product_tag.text.strip()
+                        if any(keyword in product_url.lower() for keyword in keywords):
+                            found_items.append(product_url)
 
             except urllib.error.HTTPError as e:
-                print(f"FAILED: HTTP {e.code}")
-                print(f"URL: {sitemap_url}")
+                error_log.append("Some sitemaps could not be fetched. HTTP Error: {} for URL: {}".format(e.code, sitemap_url))
                 continue
 
     def extract_product_name(url):
@@ -106,7 +110,9 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
         return scored_urls
 
     sorted_results = sort_urls_by_keywords(found_items, keywords)
-    print(sorted_results)
+    shortened_results = sorted_results[:5]
+    print(shortened_results)
+    print(error_log)
 
     #for i in range(catalog_count):
      #   url = 'https://www.paknsave.co.nz/ecomsitemap_index.xml'
