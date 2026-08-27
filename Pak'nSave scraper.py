@@ -1,12 +1,15 @@
 # Pak'nSave robots.txt: www.paknsave.co.nz/robots.txt
 
-# Imports the required library for making HTTP requests, and butiful soup for decoding the HTML/XML requests. SequenceMatcher for sorting the URLs by rellevance
+# Imports the required library for making HTTP requests, and butiful soup for decoding the HTML/XML requests. SequenceMatcher for sorting the URLs by rellevance. SYS for paring arguments from the GUI.
 import urllib.request
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
+import sys
 
 # Defines keywords, later defined by user
-keywords = ["corn", "chips", "mexacano", "nachos"]
+#search = sys.argv[1]
+#keywords = search.lower().split()
+keywords = [ "corn", "chips"]
 
 # Sets the headers to imitate a web browser
 headers = {
@@ -32,22 +35,24 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
     soup = BeautifulSoup(data, 'xml')
     found_items = []
     catalog_count = len(soup.find_all('loc'))
+    
     for tag in soup.find_all('loc'):
         sitemap_url = tag.text.strip()
+        
         if "ecom_sitemap_products" in sitemap_url:
             target = urllib.request.Request(sitemap_url, headers=headers)
             with urllib.request.urlopen(target) as response:
                 product_list = response.read().decode('utf-8')
 
-
-        # Search the extracted product list for products that match the key words
-        soup = BeautifulSoup(product_list, 'xml')
-        loc_tags = soup.find_all('loc')
-        for tag in loc_tags:
-            product_url = tag.text.strip()
-            url_lower = product_url.lower()
-            if any(keyword in url_lower for keyword in keywords):
-                found_items.append(product_url)
+            # --- INDENTED BOTH BLOCKS BELOW INSIDE THE IF STATEMENT ---
+            # Search the extracted product list for products that match the keywords
+            sub_soup = BeautifulSoup(product_list, 'xml')  # Renamed to sub_soup to avoid overwriting main soup loop
+            loc_tags = sub_soup.find_all('loc')
+            for p_tag in loc_tags:
+                product_url = p_tag.text.strip()
+                url_lower = product_url.lower()
+                if any(keyword in url_lower for keyword in keywords):
+                    found_items.append(product_url)
 
     def extract_product_name(url):
         """Extracts and cleans the product name from the URL query string."""
