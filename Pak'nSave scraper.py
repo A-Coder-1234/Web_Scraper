@@ -110,15 +110,36 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
         return scored_urls
 
     sorted_results = sort_urls_by_keywords(found_items, keywords)
-    shortened_results = sorted_results[:5]
-    print(shortened_results)
+
+    # Extract data
+    overflow = 0
+    for i in range(5):
+        #check if item is available, if not, try the next item in the list
+        url = sorted_results[i + overflow][0]
+        target = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(target) as response:
+            data = response.read().decode('utf-8')
+        while "Sorry, this item is not available in" in data:
+            overflow = overflow + 1
+            # Try the next URL in the list if the current one is unavailable
+            url = sorted_results[i + overflow][0]
+            target = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(target) as response:
+                data = response.read().decode('utf-8')
+    
+        soup = BeautifulSoup(data, 'html.parser')
+        name = soup.select_one('h1').get_text().strip()
+        price_dol = soup.find('p', attrs={'data-testid': 'price-dollars'})
+        price_cent = soup.find('p', attrs={'data-testid': 'price-cents'})
+        price = f"${price_dol.get_text().strip()}.{price_cent.get_text().strip()}" if price_dol and price_cent else "Price not found"
+        price_per_unit = soup.find('p', attrs={'data-testid': 'non-promo-comparative-price'}).get_text().strip() if soup.find('p', attrs={'data-testid': 'non-promo-comparative-price'}) else "Price per unit not found"
+
+        print(name)
+        print(price)
+        print(price_per_unit)
+        print(url)
     print(error_log)
 
-    #for i in range(catalog_count):
-     #   url = 'https://www.paknsave.co.nz/ecomsitemap_index.xml'
-    #    target = urllib.request.Request(url, headers=headers)
-     #   with urllib.request.urlopen(target) as response:
-    #        data = response.read().decode('utf-8')
 else:
     # If the sitemap URL was NOT found the code will notify the user to contact the developer
     print("Sitemap NOT found in robots.txt, contact developer.")
