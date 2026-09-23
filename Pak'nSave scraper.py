@@ -34,7 +34,7 @@ with urllib.request.urlopen(target) as response:
     data = response.read().decode('utf-8')
 
 # Checks if the sitemap URL is present in the robots.txt file
-if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
+if "Sitemap:" in data:
 
     # If the sitemap URL is found, it fetches the sitemap XML file
     url = 'https://www.paknsave.co.nz/ecomsitemap_index.xml'
