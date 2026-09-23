@@ -10,7 +10,7 @@ import sys
 import re
 
 # Defines keywords, later defined by user
-search = "cornchips" #sys.argv[1]
+search = "corn chips" #sys.argv[1]
 keywords = search.lower().split()
 error_log = []
 
@@ -28,7 +28,7 @@ cookie_processor = urllib.request.HTTPCookieProcessor()
 opener = urllib.request.build_opener(cookie_processor)
 urllib.request.install_opener(opener)
 
-# Fetches the robots.txt file from Pak'nSave and extracts the sitemap URL
+# Fetches the robots.txt file from Woolworths and extracts the sitemap URL
 url = 'https://www.woolworths.co.nz/robots.txt'
 target = urllib.request.Request(url, headers=headers)
 with urllib.request.urlopen(target) as response:
@@ -47,10 +47,20 @@ with urllib.request.urlopen(target) as response:
             if 'https://www.woolworths.co.nz/sitemaps/products.xml' in data:
 
                 # Extracts the product list from the sitemap
+                found_items = []
                 url = 'https://www.woolworths.co.nz/sitemaps/products.xml'
                 target = urllib.request.Request(url, headers=headers)
                 with urllib.request.urlopen(target) as response:
                     data = response.read().decode('utf-8')
-                    print(data)
+                    soup = BeautifulSoup(data, 'xml')
+
+                    # Finds products with the specified key words in the product list extracted from the site map
+                    for product_tag in soup.find_all('loc'):
+                        product_url = product_tag.text.strip()
+                        if any(keyword in product_url.lower() for keyword in keywords):
+                            found_items.append(product_url)
+                    print(found_items)
+
+                    
             else:
                 print("error: expected sitemap \"https://www.woolworths.co.nz/sitemaps/products.xml\" in woolworths sitemap extracted from robots.txt")
