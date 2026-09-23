@@ -33,3 +33,6 @@ Open http://127.0.0.1:5000.
 # To do:
 - Check legality of scraping target sites.
 - Install requirements.
+
+## Requirements
+Butiful soup 4

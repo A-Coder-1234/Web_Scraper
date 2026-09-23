@@ -1,6 +1,6 @@
 # Pak'nSave robots.txt: www.paknsave.co.nz/robots.txt
 
-# Imports the required library for making HTTP requests, and butiful soup for decoding the HTML/XML requests. SequenceMatcher for sorting the URLs by rellevance. SYS for paring arguments from the GUI.
+# Imports the required library for making HTTP requests, and beautiful soup for decoding the HTML/XML requests. SequenceMatcher for sorting the URLs by relevance. SYS for paring arguments from the GUI.
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -13,10 +13,19 @@ search = sys.argv[1]
 keywords = search.lower().split()
 error_log = []
 
-# Sets the headers to imitate a web browser
+# Sets advanced headers to firmly imitate a real web browser
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-NZ,en-GB;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1"
 }
+
+# Install a global cookie handler so the script retains cookies across multiple web requests
+cookie_processor = urllib.request.HTTPCookieProcessor()
+opener = urllib.request.build_opener(cookie_processor)
+urllib.request.install_opener(opener)
 
 # Fetches the robots.txt file from Pak'nSave
 url = 'https://www.paknsave.co.nz/robots.txt'
@@ -113,22 +122,39 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
 
     # Extract data
     overflow = 0
-    for i in range(5):
-        #check if item is available, if not, try the next item in the list
+    # Determine the actual number of iterations to prevent crashing if fewer than 5 items are found
+    max_items_to_display = min(5, len(sorted_results))
+    
+    for i in range(max_items_to_display):
+        if (i + overflow) >= len(sorted_results):
+            break
+            
         url = sorted_results[i + overflow][0]
         target = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(target) as response:
-            data = response.read().decode('utf-8')
-        while "Sorry, this item is not available in" in data:
-            overflow = overflow + 1
-            # Try the next URL in the list if the current one is unavailable
-            url = sorted_results[i + overflow][0]
-            target = urllib.request.Request(url, headers=headers)
+        
+        try:
             with urllib.request.urlopen(target) as response:
                 data = response.read().decode('utf-8')
+            
+            while "Sorry, this item is not available in" in data:
+                overflow = overflow + 1
+                if (i + overflow) >= len(sorted_results):
+                    break
+                # Try the next URL in the list if the current one is unavailable
+                url = sorted_results[i + overflow][0]
+                target = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(target) as response:
+                    data = response.read().decode('utf-8')
+        except urllib.error.HTTPError as e:
+            error_log.append("Product page unavailable. HTTP Error: {} for URL: {}".format(e.code, url))
+            continue
     
         soup = BeautifulSoup(data, 'html.parser')
-        name = soup.select_one('h1').get_text().strip()
+        
+        # Safe extraction checks for DOM structure parsing
+        h1_element = soup.select_one('h1')
+        name = h1_element.get_text().strip() if h1_element else "Product Name Unreadable"
+        
         price_dol = soup.find('p', attrs={'data-testid': 'price-dollars'})
         price_cent = soup.find('p', attrs={'data-testid': 'price-cents'})
         price = f"${price_dol.get_text().strip()}.{price_cent.get_text().strip()}" if price_dol and price_cent else "Price not found"
@@ -138,6 +164,8 @@ if "Sitemap: https://www.paknsave.co.nz/ecomsitemap_index.xml" in data:
         print(price)
         print(price_per_unit)
         print(url)
+        print("-" * 20)
+        
     print(error_log)
 
 else:
