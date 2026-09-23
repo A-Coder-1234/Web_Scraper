@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /checkout
+Disallow: /account
+Disallow: /lists
+Disallow: /shop/search
+Disallow: /recipes/saved
+Disallow: /specials-offers/boosts
+
+Sitemap: https://www.woolworths.co.nz/sitemap.xml
