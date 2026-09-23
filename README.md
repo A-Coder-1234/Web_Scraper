@@ -31,8 +31,9 @@ Open http://127.0.0.1:5000.
 - `static/` - dashboard styling.
 
 # To do:
-- Check legality of scraping target sites.
-- Install requirements.
+- Check legality of scraping target sites. done/good
+- Install requirements. done/good
+- Seperate and fix sort by relevance logic
 
 ## Requirements
 Butiful soup 4
