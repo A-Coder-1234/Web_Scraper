@@ -61,6 +61,60 @@ with urllib.request.urlopen(target) as response:
                             found_items.append(product_url)
                     print(found_items)
 
+                    def extract_product_name(url):
+                        """Extracts and cleans the product name from the URL query string."""
+                        parsed_url = urllib.parse.urlparse(url)
+                        query_params = urllib.parse.parse_qs(parsed_url.query)
+                        raw_name = query_params.get('name', [''])[0]
+                        return raw_name.replace('-', ' ').replace('%27', "'").strip()
+
+                    def calculate_keyword_relevance(product_name, keyword_list):
+                        """
+                        Calculates relevance based on token matching.
+                        Returns a score based on percentage of keywords matched + extra weight for early matches.
+                        """
+                        product_words = set(product_name.lower().split())
+                        matched_count = 0
+    
+                        # Clean and lowercase the input keywords
+                        clean_keywords = [str(kw).lower().strip() for kw in keyword_list]
+    
+                        for kw in clean_keywords:
+                            if kw in product_words:
+                            matched_count += 1
+            
+                        # If no words match, score is 0
+                            if not clean_keywords or matched_count == 0:
+                            return 0.0
+        
+                        # Base score: percentage of keywords found
+                        match_ratio = matched_count / len(clean_keywords)
+    
+                        # Tie-breaker density: favors shorter, more concise product titles over long ones
+                        density_bonus = matched_count / len(product_words)
+    
+                    return match_ratio + (density_bonus * 0.1)
+
+                    def sort_urls_by_keywords(url_list, keyword_list):
+                        """Sorts the URL list by relevance to a list of keywords."""
+                        scored_urls = []
+    
+                    for url in url_list:
+                        product_name = extract_product_name(url)
+                        score = calculate_keyword_relevance(product_name, keyword_list)
+                        scored_urls.append((url, product_name, score))
+    
+                        # Sort by score descending
+                        scored_urls.sort(key=lambda x: x[2], reverse=True)
+                        return scored_urls
+
+                    sorted_results = sort_urls_by_keywords(found_items, keywords)
+
+    # Extract data
+    overflow = 0
+    # Determine the actual number of iterations to prevent crashing if fewer than 5 items are found
+    max_items_to_display = min(5, len(sorted_results))
+
                     
             else:
                 print("error: expected sitemap \"https://www.woolworths.co.nz/sitemaps/products.xml\" in woolworths sitemap extracted from robots.txt")
