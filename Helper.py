@@ -2,16 +2,8 @@
 
 ### Sort by relevance logic
 # Defines variables used for debugging. Later defined in other scripts.
-items = [
-    "https://www.woolworths.co.nz/shop/product-details/286361/Name-Thing-Chips",
-    "https://www.woolworths.co.nz/shop/product-details/286362/Other-Name-Thing-Chips",
-    "https://www.woolworths.co.nz/shop/product-details/286363/Name-thing-corn",
-    "https://www.woolworths.co.nz/shop/product-details/286364/Name-thing-corn-chips",
-    "https://www.woolworths.co.nz/shop/product-details/286365/Corny-Chips"
-         ]
-keywords = ["name", "chips"]
-output = []
-def sort_items(items, keywords, output):
+#Your_output_list = sort_items(your_items_list, your_keywords_list)
+def sort_items(items, keywords):
     # defines key variables used for storing the scores.)
     scores = []
 
@@ -36,6 +28,7 @@ def sort_items(items, keywords, output):
 
     # remove the score from the output, leaving only the item name.
     output = [x.split(',')[1] for x in scores]
+    return output
 
-sort_items(items, keywords, output)
+#output = sort_items(items, keywords)
 print(output)
