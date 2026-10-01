@@ -29,6 +29,3 @@ def sort_items(items, keywords):
     # remove the score from the output, leaving only the item name.
     output = [x.split(',')[1] for x in scores]
     return output
-
-#output = sort_items(items, keywords)
-print(output)

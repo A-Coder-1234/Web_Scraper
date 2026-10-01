@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 import sys
 import re
+import Helper
 
 # Defines keywords/gets key words defined by the user in the GUI. Also defins important variables for the script.
 found_items = []
@@ -87,5 +88,5 @@ def fetch_items():
                     )
 
 fetch_items()
-print(f"Found {len(found_items)} items matching the keywords: {', '.join(keywords)}")
+found_items = Helper.sort_items(found_items, keywords)
 print(found_items)
