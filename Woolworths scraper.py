@@ -11,7 +11,8 @@ from difflib import SequenceMatcher
 import sys
 import re
 
-# Defines keywords, later defined by user
+# Defines keywords/gets key words defined by the user in the GUI. Also defins important variables for the script.
+found_items = []
 search = "corn chips"  # sys.argv[1]
 keywords = search.lower().split()
 error_log = []
@@ -35,132 +36,56 @@ opener = urllib.request.build_opener(cookie_processor)
 urllib.request.install_opener(opener)
 
 # Fetches the robots.txt file from Woolworths and extracts the sitemap URL
-url = 'https://www.woolworths.co.nz/robots.txt'
-target = urllib.request.Request(url, headers=headers)
 
-with urllib.request.urlopen(target) as response:
-    data = response.read().decode('utf-8')
-    match = re.search(r"(?im)^Sitemap:\s*(\S+)", data)
+def fetch_items():
+    url = 'https://www.woolworths.co.nz/robots.txt'
+    target = urllib.request.Request(url, headers=headers)
 
-    if match:
-        sitemap_url = match.group(1)
+    with urllib.request.urlopen(target) as response:
+        data = response.read().decode('utf-8')
+        match = re.search(r"(?im)^Sitemap:\s*(\S+)", data)
 
-        # If the sitemap URL is found, it fetches the sitemap XML file
-        url = sitemap_url
-        target = urllib.request.Request(url, headers=headers)
+        if match:
+            sitemap_url = match.group(1)
 
-        with urllib.request.urlopen(target) as response:
-            data = response.read().decode('utf-8')
+            # If the sitemap URL is found, it fetches the sitemap XML file
+            url = sitemap_url
+            target = urllib.request.Request(url, headers=headers)
 
-            # Checks if the expected sitemap URL is in the extracted data
-            if 'https://www.woolworths.co.nz/sitemaps/products.xml' in data:
+            with urllib.request.urlopen(target) as response:
+                data = response.read().decode('utf-8')
 
-                # Extracts the product list from the sitemap
-                found_items = []
-                url = 'https://www.woolworths.co.nz/sitemaps/products.xml'
-                target = urllib.request.Request(url, headers=headers)
+                # Checks if the expected sitemap URL is in the extracted data
+                if 'https://www.woolworths.co.nz/sitemaps/products.xml' in data:
 
-                with urllib.request.urlopen(target) as response:
-                    data = response.read().decode('utf-8')
-                    soup = BeautifulSoup(data, 'xml')
+                    # Extracts the product list from the sitemap
+                    url = 'https://www.woolworths.co.nz/sitemaps/products.xml'
+                    target = urllib.request.Request(url, headers=headers)
 
-                    # Finds products with the specified keywords in the
-                    # product list extracted from the sitemap
-                    for product_tag in soup.find_all('loc'):
-                        product_url = product_tag.text.strip()
+                    with urllib.request.urlopen(target) as response:
+                        data = response.read().decode('utf-8')
+                        soup = BeautifulSoup(data, 'xml')
 
-                        if any(
-                            keyword in product_url.lower()
-                            for keyword in keywords
-                        ):
-                            found_items.append(product_url)
+                        # Finds products with the specified keywords in the
+                        # product list extracted from the sitemap
+                        for product_tag in soup.find_all('loc'):
+                            product_url = product_tag.text.strip()
 
-                    # Orders the found results by relevance
-                    def extract_product_name(url):
-                        """Extracts and cleans the product name from the URL query string."""
-                        parsed_url = urllib.parse.urlparse(url)
-                        query_params = urllib.parse.parse_qs(parsed_url.query)
-                        raw_name = query_params.get('name', [''])[0]
+                            if any(
+                                keyword in product_url.lower()
+                                for keyword in keywords
+                            ):
+                                found_items.append(product_url)
 
-                        return (
-                            raw_name
-                            .replace('-', ' ')
-                            .replace('%27', "'")
-                            .strip()
-                        )
+                    print("Successfully fetched items from Woolworths sitemap.")
 
-                    def calculate_keyword_relevance(product_name, keyword_list):
-                        """
-                        Calculates relevance based on token matching.
-
-                        Returns a score based on percentage of keywords matched
-                        + extra weight for shorter, more concise product titles.
-                        """
-                        product_words = set(product_name.lower().split())
-                        matched_count = 0
-
-                        # Clean and lowercase the input keywords
-                        clean_keywords = [
-                            str(kw).lower().strip()
-                            for kw in keyword_list
-                        ]
-
-                        for kw in clean_keywords:
-                            if kw in product_words:
-                                matched_count += 1
-
-                        # If no keywords are provided or no words match,
-                        # score is 0.
-                        if not clean_keywords or matched_count == 0:
-                            return 0.0
-
-                        # Base score: percentage of keywords found
-                        match_ratio = matched_count / len(clean_keywords)
-
-                        # Tie-breaker density: favors shorter, more concise
-                        # product titles over long ones
-                        density_bonus = matched_count / len(product_words)
-
-                        return match_ratio + (density_bonus * 0.1)
-
-                    def sort_urls_by_keywords(url_list, keyword_list):
-                        """Sorts the URL list by relevance to a list of keywords."""
-                        scored_urls = []
-
-                        for url in url_list:
-                            product_name = extract_product_name(url)
-                            score = calculate_keyword_relevance(
-                                product_name,
-                                keyword_list
-                            )
-                            scored_urls.append(
-                                (url, product_name, score)
-                            )
-
-                        # Sort by score descending
-                        scored_urls.sort(
-                            key=lambda x: x[2],
-                            reverse=True
-                        )
-
-                        return scored_urls
-
-                    sorted_results = sort_urls_by_keywords(
-                        found_items,
-                        keywords
+                else:
+                    print(
+                        'error: expected sitemap '
+                        '"https://www.woolworths.co.nz/sitemaps/products.xml" '
+                        'in woolworths sitemap extracted from robots.txt'
                     )
 
-                # Extract data
-                overflow = 0
-
-                # Determine the actual number of iterations to prevent
-                # crashing if fewer than 5 items are found
-                max_items_to_display = min(5, len(sorted_results))
-                print(sorted_results)
-
-            else:
-                print(
-                    'error: expected sitemap '
-                    '"https://www.woolworths.co.nz/sitemaps/products.xml" '
-                    'in woolworths sitemap extracted from robots.txt'
-                )
+fetch_items()
+print(f"Found {len(found_items)} items matching the keywords: {', '.join(keywords)}")
+print(found_items)
