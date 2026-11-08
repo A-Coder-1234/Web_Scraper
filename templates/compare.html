@@ -1,15 +1,64 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Comparison | Basket Check</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Price comparison | Basket Check</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='workflow.css') }}">
+</head>
 <body>
   <main class="shell">
-    <nav><a href="{{ url_for('index') }}">← All lists</a></nav>
-    <header class="page-head"><p class="eyebrow">Comparison complete</p><h1>Your basket, store by store</h1><p class="lede">Checked {{ checked_at }}. Prices are indicative until the retailer adapter is tuned and verified.</p></header>
+    <nav><a href="{{ url_for('list_detail', list_id=check.list_id) }}">← {{ check.list_name }}</a></nav>
+    <header class="page-head">
+      <p class="eyebrow">Saved comparison</p>
+      <h1>Your basket, store by store</h1>
+      <p class="lede">Checked {{ check.checked_at }}. A price is shown only when it was verified from retailer product data or entered manually.</p>
+    </header>
     <div class="comparison-table">
-      <div class="table-head"><span>Product</span>{% for key, name, kind in retailers %}<span>{{ name }}{% if kind == 'manual' %}<small>manual</small>{% endif %}</span>{% endfor %}</div>
-      {% for row in results %}<div class="table-row"><strong>{{ row.product.name }}</strong>{% for key, name, kind in retailers %}{% set result = row.prices[key] %}<div class="price-cell {% if result.status == 'found' %}found{% endif %}">{% if key == 'vegiking' and row.product.manual_price is not none %}<b>${{ '%.2f'|format(row.product.manual_price) }}</b><small>manual entry</small>{% elif result.price is not none %}<b>${{ '%.2f'|format(result.price) }}</b>{% else %}<b>--</b><small>{{ result.status }}</small>{% endif %}</div>{% endfor %}</div>{% endfor %}
+      <div class="table-head">
+        <span>Product</span>
+        {% for key, name, kind in retailers %}<span>{{ name }}{% if kind == 'manual' %}<small>manual</small>{% elif kind == 'unsupported' %}<small>not connected</small>{% endif %}</span>{% endfor %}
+      </div>
+      {% for row in results %}
+      <div class="table-row">
+        <strong>{{ row.product.name }}<small>Qty {{ row.product.quantity }}</small></strong>
+        {% for key, name, kind in retailers %}
+          {% set result = row.prices[key] %}
+          <div class="price-cell {% if result.status == 'found' %}found{% endif %}">
+            {% if result.price is not none %}
+              <b>${{ '%.2f'|format(result.price) }}</b>
+              <small>{% if key == 'vegiking' %}manual entry{% else %}{{ result.product_name or 'verified offer' }}{% endif %}</small>
+              {% if result.product_url %}<a class="source-link" href="{{ result.product_url }}" target="_blank" rel="noopener noreferrer">Source ↗</a>{% endif %}
+            {% else %}
+              <b>—</b>
+              <small>{{ result.status|replace('_', ' ') }}</small>
+              <small>{{ result.message }}</small>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <div class="table-row total-row">
+        <strong>Basket total <small>includes quantities</small></strong>
+        {% for key, name, kind in retailers %}
+          <div class="price-cell">
+            {% set total = namespace(value=0, complete=true) %}
+            {% for row in results %}
+              {% set result = row.prices[key] %}
+              {% if result.price is none %}
+                {% set total.complete = false %}
+              {% else %}
+                {% set total.value = total.value + result.price * row.product.quantity %}
+              {% endif %}
+            {% endfor %}
+            {% if total.complete %}<b>${{ '%.2f'|format(total.value) }}</b>{% else %}<b>—</b><small>incomplete prices</small>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
     </div>
-    <p class="fine-print">Retailer pages can change and may block automated requests. Respect each retailer’s terms, robots.txt, rate limits, and any available official access method.</p>
+    <p class="fine-print">Automated checks respect each retailer’s robots.txt, use a low request rate, and only accept structured NZD prices. A result may be missing when a site disallows access or does not publish a verifiable offer. 4 Square lookup is not yet connected.</p>
+    <form method="post" action="{{ url_for('compare_list', list_id=check.list_id) }}"><button class="primary-action">Check prices again <span>→</span></button></form>
   </main>
 </body>
 </html>

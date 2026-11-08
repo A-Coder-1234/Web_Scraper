@@ -1,20 +1,22 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ shopping_list.name }} | Basket Check</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ shopping_list.name }} | Basket Check</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='workflow.css') }}"></head>
 <body>
   <main class="shell narrow">
     <nav><a href="{{ url_for('index') }}">← All lists</a></nav>
-    <header class="page-head"><p class="eyebrow">Shopping list</p><h1>{{ shopping_list.name }}</h1><p class="lede">Add the products you care about. The manual scrape checks online shop results; Vegiking prices can be entered below.</p></header>
+    <header class="page-head"><p class="eyebrow">Shopping list</p><h1>{{ shopping_list.name }}</h1><p class="lede">Add products, enter Vegiking prices manually, and compare verified public retailer offers.</p></header>
     {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<p class="notice {{ category }}">{{ message }}</p>{% endfor %}{% endwith %}
+    {% if latest_check %}<p class="fine-print">Last comparison: <a href="{{ url_for('show_check', check_id=latest_check.id) }}">{{ latest_check.checked_at }} → view results</a></p>{% endif %}
     <form method="post" action="{{ url_for('add_product', list_id=shopping_list.id) }}" class="add-form"><input name="name" placeholder="Product name, e.g. bananas 1kg" required><input name="quantity" type="number" min="1" value="1" aria-label="Quantity"><button>Add product</button></form>
     {% if products %}
     <div class="product-list">
       {% for product in products %}
-      <article class="product-row"><div><strong>{{ product.name }}</strong><span>Quantity {{ product.quantity }}</span></div><form method="post" action="{{ url_for('save_manual_price', product_id=product.id) }}" class="manual-form"><input type="hidden" name="list_id" value="{{ shopping_list.id }}"><label>Vegiking <span>$</span><input name="price" type="number" min="0" step="0.01" value="{{ product.manual_price or '' }}" placeholder="manual"></label><button class="quiet">Save</button></form></article>
+      <article class="product-row"><div><strong>{{ product.name }}</strong><span>Quantity {{ product.quantity }}</span></div><div class="product-actions"><form method="post" action="{{ url_for('save_manual_price', product_id=product.id) }}" class="manual-form"><label>Vegiking <span>$</span><input name="price" type="number" min="0" step="0.01" value="{{ '%.2f'|format(product.manual_price) if product.manual_price is not none else '' }}" placeholder="manual"></label><button class="quiet">Save</button></form><form method="post" action="{{ url_for('delete_product', product_id=product.id) }}"><button class="quiet" aria-label="Remove {{ product.name }}">Remove</button></form></div></article>
       {% endfor %}
     </div>
     <form method="post" action="{{ url_for('compare_list', list_id=shopping_list.id) }}"><button class="primary-action">Scrape and compare prices <span>→</span></button></form>
     {% else %}<div class="empty"><p>Your list is empty. Add a product to begin.</p></div>{% endif %}
+    <form method="post" action="{{ url_for('delete_list', list_id=shopping_list.id) }}" class="delete-list-form"><button class="quiet">Delete this list</button></form>
   </main>
 </body>
 </html>
